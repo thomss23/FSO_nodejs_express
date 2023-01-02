@@ -1,0 +1,27 @@
+{
+  "name": "fso_nodejs_express",
+  "version": "1.0.0",
+  "description": "homework exercises",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node index.js",
+    "dev":   "nodemon index.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/thomss23/FSO_nodejs_express.git"
+  },
+  "author": "Thomas Borbeli",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/thomss23/FSO_nodejs_express/issues"
+  },
+  "homepage": "https://github.com/thomss23/FSO_nodejs_express#readme",
+  "dependencies": {
+    "express": "^4.18.2"
+  },
+  "devDependencies": {
+    "nodemon": "^2.0.20"
+  }
+}

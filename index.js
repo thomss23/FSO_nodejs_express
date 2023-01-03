@@ -96,7 +96,35 @@ app.post("/api/persons", (req, res) => {
     res.json(person)
 })
 
-const PORT = 3001
+app.put('/api/persons/:id', (req, res) => {
+    const id = Number(req.params.id)
+    const newNumber = req.body.number;
+    let updatedPerson;
+
+    for(let i = 0; i < persons.length; i++) {
+        if(persons[i].id === id) {
+            persons[i].number = newNumber;
+            updatedPerson = persons[i];
+        }
+        
+    }
+
+    if(!updatedPerson) {
+        return res.status(404).json({
+            error: "no such person present"
+        })
+    }
+
+    if(!newNumber) {
+        return res.status(400).json({
+            error: "number is missing from request"
+        })
+    }
+
+    res.json(updatedPerson)
+})
+
+const PORT = process.env.PORT || 3001
 app.listen(PORT, () => {
-console.log(`Server running on port ${PORT}`)
+  console.log(`Server running on port ${PORT}`)
 })

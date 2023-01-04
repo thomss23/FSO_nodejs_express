@@ -1,7 +1,9 @@
+require('dotenv').config()
 const express = require('express')
 // const morgan = require('morgan')
 const cors = require('cors')
 const app = express()
+const Person = require('./models/person')
 
 app.use(cors())
 app.use(express.static('build'))
@@ -37,7 +39,11 @@ let persons  =
 ]
 
 app.get("/api/persons", (req, res) => {
-    res.json(persons);
+    Person
+        .find({})
+        .then((people) => {
+            res.status(200).json(people);
+        })
 })
 
 app.get("/info", (req,res) => {
@@ -68,11 +74,10 @@ app.post("/api/persons", (req, res) => {
     const id = persons.length > 0 ? Math.floor(Math.random() * 100) : 0;
     const body = req.body;
 
-    const person = {
-        name: body.name,
-        number: body.number,
-        id : id
-    }
+    const person = new Person({
+        name:body.name,
+        number: body.number
+    })
 
     const personWithNameFromRequest = persons.find(p => p.name === body.name);
 
@@ -94,9 +99,10 @@ app.post("/api/persons", (req, res) => {
         })
     }
 
-    persons = persons.concat(person)
+    person.save()
+          .then(result => res.json(result))
+          .catch(err => console.log(err))
 
-    res.json(person)
 })
 
 app.put('/api/persons/:id', (req, res) => {

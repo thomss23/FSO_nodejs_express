@@ -9,34 +9,34 @@ app.use(cors())
 app.use(express.static('build'))
 app.use(express.json())
 
+class BadRequestError extends Error {
+    constructor(message) {
+      super(message);
+      this.name = "BadRequestError";
+    }
+}
+
+const errorHandler = (error, request, response, next) => {
+    console.error(error.message)
+  
+    if (error.name === 'CastError') {
+      return response.status(400).send({ error: 'malformatted id' })
+    } 
+
+    if(error.name === "BadRequestError") {
+        return response.status(400).json({
+            error: error.message
+        })
+    }
+  
+    next(error)
+}
+
 // morgan.token('body', req => {
 //     return JSON.stringify(req.body)
 // })
 // app.use(morgan(':method :url :status :res[content-length] - :response-time ms :body'))
 
-let persons  = 
-[
-    { 
-      "id": 1,
-      "name": "Arto Hellas", 
-      "number": "040-123456"
-    },
-    { 
-      "id": 2,
-      "name": "Ada Lovelace", 
-      "number": "39-44-5323523"
-    },
-    { 
-      "id": 3,
-      "name": "Dan Abramov", 
-      "number": "12-43-234345"
-    },
-    { 
-      "id": 4,
-      "name": "Mary Poppendieck", 
-      "number": "39-23-6423122"
-    }
-]
 
 app.get("/api/persons", (req, res) => {
     Person
@@ -44,94 +44,94 @@ app.get("/api/persons", (req, res) => {
         .then((people) => {
             res.status(200).json(people);
         })
+        .catch(err => next(err))
 })
 
 app.get("/info", (req,res) => {
-    const response = `Phonebook has info for ${persons.length} people <br/> ${new Date()}`; 
-    res.send(response)
+    Person
+    .find({})
+    .then((people) => {
+        res.send(`Phonebook has info for ${people.length} people <br/> ${new Date()}`);
+    })
+    .catch(err => next(err))
 })
 
-app.get("/api/persons/:id", (req, res) => {
-    const id = Number(req.params.id)
-    const person = persons.find(person => person.id === id);
-
-    if(person) {
-        res.json(person)
-    } else {
-        res.status(404).end();
-    }
+app.get("/api/persons/:id", (req, res, next) => {
+    Person.findById(req.params.id)
+        .then(person => {
+            console.log(person);
+            if(person) {
+                res.json(person)
+            } else {
+                res.status(404).end();
+            }
+        })
+        .catch(err => next(err))
+        
     
 })
 
-app.delete("/api/persons/:id", (req, res) => {
-    const id = Number(req.params.id)
-    persons = persons.filter(person => person.id !== id)
+app.delete("/api/persons/:id", (req, res, next) => {
+    console.log(req.params.id)
+    Person.findByIdAndRemove(req.params.id)
+          .then(result => res.status(204).end())
+          .catch(error => next(error))
 
-    res.status(204).end()
 })
 
-app.post("/api/persons", (req, res) => {
-    const id = persons.length > 0 ? Math.floor(Math.random() * 100) : 0;
+app.post("/api/persons", (req, res, next) => {
     const body = req.body;
+
+    if(!body.name) {
+        throw new BadRequestError("name is missing from request")
+    }
+
+    if(!body.number) {
+        throw new BadRequestError("number is missing from request")
+    }
 
     const person = new Person({
         name:body.name,
         number: body.number
     })
-
-    const personWithNameFromRequest = persons.find(p => p.name === body.name);
-
-    if(!body.name) {
-        return res.status(400).json({
-            error: "name is missing from request"
-        })
-    }
-
-    if(!body.number) {
-        return res.status(400).json({
-            error: "number is missing from request"
-        })
-    }
-
-    if(personWithNameFromRequest) {
-        return res.status(400).json({
-            error: "name must be unique"
-        })
-    }
-
-    person.save()
-          .then(result => res.json(result))
-          .catch(err => console.log(err))
+    
+    Person.find({name : body.name})
+          .then(result => {
+            console.log(result)
+            if(result.length > 0) {
+                throw new BadRequestError("name must be unique")
+            }
+            return;
+          })
+          .then(() => {
+            return person.save()
+            .then(result => res.json(result))
+            .catch(err => next(err))
+          })
+          .catch(err => {
+              return next(err)
+          })
 
 })
 
 app.put('/api/persons/:id', (req, res) => {
-    const id = Number(req.params.id)
-    const newNumber = req.body.number;
-    let updatedPerson;
 
-    for(let i = 0; i < persons.length; i++) {
-        if(persons[i].id === id) {
-            persons[i].number = newNumber;
-            updatedPerson = persons[i];
-        }
-        
+    if(!req.body.number) {
+        throw new BadRequestError("number is missing from request")
     }
 
-    if(!updatedPerson) {
-        return res.status(404).json({
-            error: "no such person present"
-        })
+    const person = {
+        name: req.body.name,
+        number: req.body.number
     }
 
-    if(!newNumber) {
-        return res.status(400).json({
-            error: "number is missing from request"
-        })
-    }
+    Person.findByIdAndUpdate(req.params.id, person, {new: true})
+        .then(updatedPerson => res.json(updatedPerson))
+        .catch(error => next(error))
 
-    res.json(updatedPerson)
 })
+
+app.use(errorHandler)
 
 const PORT = process.env.PORT || 8080
 app.listen(PORT, () => {
